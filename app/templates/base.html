@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Carnet de munte{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="{{ url_for('trails.index') }}">
+    <span class="brand-blaze" aria-hidden="true"></span>
+    Carnet de munte
+  </a>
+  {% if current_user.is_authenticated %}
+  <nav class="topnav">
+    <a class="btn btn-primary" href="{{ url_for('trails.create') }}">+ Tură nouă</a>
+    <a class="btn btn-ghost" href="{{ url_for('auth.logout') }}">Ieșire</a>
+  </nav>
+  {% endif %}
+</header>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <div class="flash-wrap">
+    {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<main>{% block content %}{% endblock %}</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

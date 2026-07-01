@@ -1,0 +1,217 @@
+/* Carnet de munte — carnet alpin romanesc.
+   Paleta: molid inchis pe hartie-lichen, accent = rosul marcajelor. */
+:root {
+  --ink: #22332c;          /* molid inchis */
+  --ink-soft: #48584f;
+  --paper: #edefe8;        /* hartie cu tenta de lichen */
+  --card: #f7f8f3;
+  --line: #c9cec0;         /* linii de contur */
+  --blaze: #c1301f;        /* rosul marcajului */
+  --blaze-blue: #1f4e9c;
+  --blaze-yellow: #e0a800;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --sans: "IBM Plex Sans", system-ui, sans-serif;
+  --display: "Archivo", var(--sans);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+}
+a { color: inherit; }
+
+/* ---------- bara de sus ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper);
+}
+.brand {
+  font-family: var(--display); font-weight: 800; font-size: 20px;
+  letter-spacing: .02em; text-transform: uppercase; text-decoration: none;
+  display: flex; align-items: center; gap: 10px;
+}
+.brand-blaze {
+  width: 20px; height: 20px; background: #fff; border: 1.5px solid var(--ink);
+  position: relative; display: inline-block;
+}
+.brand-blaze::after {
+  content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 6px;
+  background: var(--blaze);
+}
+.topnav { display: flex; gap: 10px; }
+
+/* ---------- butoane & formulare ---------- */
+.btn {
+  font-family: var(--display); font-weight: 600; font-size: 13px;
+  text-transform: uppercase; letter-spacing: .05em; text-decoration: none;
+  padding: 8px 14px; border: 1.5px solid var(--ink); background: transparent;
+  color: var(--ink); cursor: pointer; display: inline-block;
+}
+.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary:hover { background: var(--blaze); border-color: var(--blaze); }
+.btn-ghost:hover { border-color: var(--blaze); color: var(--blaze); }
+.btn-danger { border-color: var(--blaze); color: var(--blaze); }
+.btn-danger:hover { background: var(--blaze); color: #fff; }
+.btn:focus-visible { outline: 3px solid var(--blaze-yellow); outline-offset: 2px; }
+
+label { display: block; font-weight: 600; margin: 14px 0 4px; font-size: 13px;
+        text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); }
+input[type=text], input[type=date], input[type=password], select, textarea {
+  width: 100%; padding: 9px 10px; font: inherit; color: var(--ink);
+  background: #fff; border: 1.5px solid var(--line); border-radius: 0;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--ink);
+}
+textarea { min-height: 140px; resize: vertical; }
+input[type=file] { margin-top: 4px; font-family: var(--mono); font-size: 13px; }
+
+.flash-wrap { max-width: 1100px; margin: 12px auto 0; padding: 0 22px; }
+.flash {
+  border: 1.5px solid var(--ink); border-left: 6px solid var(--blaze);
+  background: var(--card); padding: 10px 14px; margin-bottom: 8px;
+  font-family: var(--mono); font-size: 13px;
+}
+
+main { max-width: 1100px; margin: 0 auto; padding: 20px 22px 60px; }
+
+/* ---------- pagina index ---------- */
+.page-head { display: flex; align-items: baseline; justify-content: space-between;
+             flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: 30px;
+     text-transform: uppercase; letter-spacing: .01em; margin: 8px 0; }
+.totals { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
+.totals b { color: var(--ink); }
+
+#map, #trail-map { height: 55vh; min-height: 340px; border: 2px solid var(--ink); }
+.leaflet-container { font-family: var(--sans); }
+
+.filters { display: flex; gap: 10px; margin: 14px 0 20px; flex-wrap: wrap; }
+.filters select { width: auto; min-width: 140px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+         gap: 14px; }
+.card {
+  background: var(--card); border: 1.5px solid var(--line); padding: 14px 16px;
+  text-decoration: none; display: block; position: relative;
+  transition: border-color .12s;
+}
+.card:hover { border-color: var(--ink); }
+.card h3 { margin: 0 0 2px; font-family: var(--display); font-weight: 600;
+           font-size: 17px; padding-right: 34px; }
+.card .meta { font-size: 13px; color: var(--ink-soft); margin-bottom: 8px; }
+.card .spark { display: block; margin: 6px 0 8px; }
+.card .spark polyline { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+.card .spark polygon { fill: rgba(34,51,44,.10); }
+.card .stats { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft);
+               display: flex; gap: 14px; flex-wrap: wrap; }
+.card .stats b { color: var(--ink); font-weight: 500; }
+
+.empty {
+  border: 2px dashed var(--line); padding: 60px 20px; text-align: center;
+  color: var(--ink-soft); font-family: var(--mono);
+}
+
+/* ---------- marcaje turistice ---------- */
+.blaze { width: 24px; height: 24px; background: #fff; border: 1.5px solid var(--ink);
+         display: inline-block; position: relative; flex: none; }
+.card .blaze { position: absolute; top: 12px; right: 12px; }
+.blaze::after { content: ""; position: absolute; }
+.blaze[data-m^="banda"]::after { left: 8px; top: 0; bottom: 0; width: 8px; }
+.blaze[data-m^="punct"]::after { left: 5px; top: 5px; width: 11px; height: 11px;
+                                 border-radius: 50%; }
+.blaze[data-m^="triunghi"]::after {
+  left: 3px; top: 4px; border-left: 8px solid transparent;
+  border-right: 8px solid transparent; border-bottom: 14px solid var(--b, var(--ink));
+  width: 0; height: 0; background: none !important;
+}
+.blaze[data-m^="cruce"]::after {
+  left: 8px; top: 2px; width: 5px; height: 17px; background: var(--b, var(--ink));
+  box-shadow: 0 0 0 0; 
+}
+.blaze[data-m^="cruce"]::before {
+  content: ""; position: absolute; top: 8px; left: 2px; width: 17px; height: 5px;
+  background: var(--b, var(--ink));
+}
+.blaze[data-m$="rosie"], .blaze[data-m$="rosu"]   { --b: var(--blaze); }
+.blaze[data-m$="albastra"], .blaze[data-m$="albastru"] { --b: var(--blaze-blue); }
+.blaze[data-m$="galbena"], .blaze[data-m$="galben"]    { --b: var(--blaze-yellow); }
+.blaze::after { background: var(--b, var(--ink)); }
+.blaze[data-m="nemarcat"] { border-style: dashed; }
+.blaze[data-m="nemarcat"]::after { display: none; }
+
+/* ---------- pagina de detaliu ---------- */
+.trail-head { margin: 8px 0 16px; }
+.trail-head .line1 { display: flex; align-items: center; gap: 12px; }
+.trail-head .meta { color: var(--ink-soft); font-size: 14px; }
+.trail-actions { margin-left: auto; display: flex; gap: 8px; }
+
+.statbar {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  border: 2px solid var(--ink); margin-bottom: 16px; background: var(--card);
+}
+.statbar .stat { padding: 10px 14px; border-right: 1.5px solid var(--line); }
+.statbar .stat:last-child { border-right: none; }
+.statbar .k { font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+              color: var(--ink-soft); }
+.statbar .v { font-family: var(--mono); font-size: 19px; font-weight: 500; }
+.statbar .v small { font-size: 12px; color: var(--ink-soft); }
+
+.section-title { font-family: var(--display); font-weight: 800; font-size: 15px;
+                 text-transform: uppercase; letter-spacing: .05em;
+                 border-bottom: 2px solid var(--ink); padding-bottom: 4px;
+                 margin: 26px 0 12px; }
+
+#profile-wrap { border: 1.5px solid var(--line); background: var(--card);
+                padding: 10px 12px 4px; margin-top: 14px; }
+#profile-readout { font-family: var(--mono); font-size: 12.5px;
+                   color: var(--ink-soft); height: 18px; }
+
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+           gap: 10px; }
+.gallery figure { margin: 0; position: relative; }
+.gallery img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
+               border: 1.5px solid var(--line); cursor: pointer; }
+.gallery img:hover { border-color: var(--ink); }
+.gallery .ph-time { position: absolute; left: 6px; bottom: 6px;
+  font-family: var(--mono); font-size: 11px; background: rgba(34,51,44,.85);
+  color: var(--paper); padding: 1px 6px; }
+.gallery form { position: absolute; top: 4px; right: 4px; }
+.gallery form button { font-size: 11px; padding: 2px 7px; background: rgba(247,248,243,.9); }
+
+.notes { white-space: pre-wrap; background: var(--card);
+         border: 1.5px solid var(--line); border-left: 6px solid var(--ink);
+         padding: 14px 18px; font-size: 15px; }
+
+/* lightbox minimal */
+#lightbox { position: fixed; inset: 0; background: rgba(20,28,24,.92);
+            display: none; align-items: center; justify-content: center; z-index: 2000; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 92vw; max-height: 90vh; border: 2px solid var(--paper); }
+
+/* ---------- formulare ture ---------- */
+.form-narrow { max-width: 640px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+.form-actions { margin-top: 22px; display: flex; gap: 10px; }
+.hint { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+
+/* login */
+.login-box { max-width: 360px; margin: 10vh auto; border: 2px solid var(--ink);
+             background: var(--card); padding: 26px 28px 30px; }
+.login-box h1 { font-size: 22px; }
+
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .statbar { grid-template-columns: repeat(3, 1fr); }
+  .statbar .stat { border-bottom: 1.5px solid var(--line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

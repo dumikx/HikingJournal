@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}{{ trail.title }} — Carnet de munte{% endblock %}
+{% block content %}
+<div class="trail-head">
+  <div class="line1">
+    {% if trail.marcaj %}<span class="blaze" data-m="{{ trail.marcaj }}" title="{{ marcaje.get(trail.marcaj, trail.marcaj) }}"></span>{% endif %}
+    <h1>{{ trail.title }}</h1>
+    <div class="trail-actions">
+      {% if trail.gpx_key %}<a class="btn btn-ghost" href="{{ url_for('trails.download_gpx', trail_id=trail.id) }}">GPX</a>{% endif %}
+      <a class="btn btn-ghost" href="{{ url_for('trails.edit', trail_id=trail.id) }}">Editează</a>
+      <form method="post" action="{{ url_for('trails.delete', trail_id=trail.id) }}"
+            onsubmit="return confirm('Ștergi definitiv tura și pozele ei?');">
+        <button class="btn btn-danger" type="submit">Șterge</button>
+      </form>
+    </div>
+  </div>
+  <div class="meta">
+    {{ trail.date.strftime("%d %B %Y") }}{% if trail.massif %} · {{ trail.massif }}{% endif %}{% if trail.peak %} · {{ trail.peak }}{% endif %}{% if trail.marcaj %} · {{ marcaje.get(trail.marcaj, '') }}{% endif %}
+  </div>
+</div>
+
+<div class="statbar">
+  <div class="stat"><div class="k">Distanță</div><div class="v">{{ trail.distance_km }} <small>km</small></div></div>
+  <div class="stat"><div class="k">Urcare</div><div class="v">{{ trail.ascent_m }} <small>m</small></div></div>
+  <div class="stat"><div class="k">Coborâre</div><div class="v">{{ trail.descent_m }} <small>m</small></div></div>
+  <div class="stat"><div class="k">Altitudine</div><div class="v">{{ trail.elev_min_m }}–{{ trail.elev_max_m }} <small>m</small></div></div>
+  {% if trail.duration_min %}
+  <div class="stat"><div class="k">Durată</div><div class="v">{{ trail.duration_min // 60 }}h{{ '%02d' % (trail.duration_min % 60) }}</div></div>
+  {% endif %}
+  {% if trail.moving_min %}
+  <div class="stat"><div class="k">În mișcare</div><div class="v">{{ trail.moving_min // 60 }}h{{ '%02d' % (trail.moving_min % 60) }}</div></div>
+  {% endif %}
+</div>
+
+<div id="trail-map"></div>
+
+<div id="profile-wrap">
+  <div id="profile-readout">Profil de elevație — treci cu mouse-ul peste grafic</div>
+  <svg id="profile" width="100%" height="150" preserveAspectRatio="none"></svg>
+</div>
+
+{% if photos %}
+<div class="section-title">Poze ({{ photos|length }})</div>
+<div class="gallery">
+  {% for p in photos %}
+  <figure>
+    <img src="{{ p.url }}" alt="{{ p.caption or trail.title }}" loading="lazy"
+         onclick="openLightbox('{{ p.url }}')">
+    {% if p.taken_at %}<span class="ph-time">{{ p.taken_at }}</span>{% endif %}
+    <form method="post" action="{{ url_for('trails.delete_photo', photo_id=p.id) }}"
+          onsubmit="return confirm('Ștergi poza?');">
+      <button class="btn btn-danger" type="submit">×</button>
+    </form>
+  </figure>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if trail.notes %}
+<div class="section-title">Notițe</div>
+<div class="notes">{{ trail.notes }}</div>
+{% endif %}
+
+<div id="lightbox" onclick="this.classList.remove('open')"><img id="lightbox-img" alt=""></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const track = {{ track_json|safe }};
+const photos = {{ photos_json|safe }};
+const profile = {{ profile_json|safe }};
+
+/* --- harta --- */
+const map = L.map('trail-map');
+L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom: 17,
+  attribution: 'Hartă: © OpenStreetMap, SRTM | © OpenTopoMap (CC-BY-SA)'
+}).addTo(map);
+
+let hoverDot = null;
+if (track.length > 1) {
+  const line = L.polyline(track, { color: '#c1301f', weight: 3 }).addTo(map);
+  L.circleMarker(track[0], { radius: 6, color: '#22332c', fillColor: '#fff', fillOpacity: 1, weight: 2 })
+    .addTo(map).bindTooltip('Start');
+  L.circleMarker(track[track.length - 1], { radius: 6, color: '#22332c', fillColor: '#22332c', fillOpacity: 1, weight: 2 })
+    .addTo(map).bindTooltip('Final');
+  map.fitBounds(line.getBounds().pad(0.1));
+  hoverDot = L.circleMarker(track[0], { radius: 6, color: '#fff', weight: 2,
+    fillColor: '#c1301f', fillOpacity: 1, opacity: 0 }).addTo(map);
+} else {
+  map.setView([45.75, 24.75], 7);
+}
+
+photos.forEach(p => {
+  if (p.lat == null) return;
+  const m = L.circleMarker([p.lat, p.lng], {
+    radius: 5, color: '#22332c', weight: 1, fillColor: '#e0a800', fillOpacity: .95
+  }).addTo(map);
+  m.bindPopup(`<img src="${p.url}" style="max-width:220px;display:block">` +
+              (p.taken_at ? `<small>${p.taken_at}</small>` : ''));
+});
+
+/* --- profil de elevatie interactiv --- */
+(function () {
+  const svg = document.getElementById('profile');
+  const readout = document.getElementById('profile-readout');
+  const d = profile.d || [], e = profile.e || [];
+  if (d.length < 2) { svg.parentElement.style.display = 'none'; return; }
+
+  const W = 1000, H = 150, P = 6;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const dMax = d[d.length - 1] || 1;
+  const eMin = Math.min(...e), eMax = Math.max(...e);
+  const span = (eMax - eMin) || 1;
+  const X = i => P + d[i] / dMax * (W - 2 * P);
+  const Y = i => H - P - (e[i] - eMin) / span * (H - 2 * P);
+
+  let pts = '';
+  for (let i = 0; i < d.length; i++) pts += `${X(i)},${Y(i)} `;
+  svg.innerHTML =
+    `<polygon points="${P},${H - P} ${pts}${W - P},${H - P}" fill="rgba(34,51,44,.12)"/>` +
+    `<polyline points="${pts}" fill="none" stroke="#22332c" stroke-width="2"/>` +
+    `<line id="pf-cursor" x1="0" x2="0" y1="${P}" y2="${H - P}" stroke="#c1301f" stroke-width="1.5" opacity="0"/>` +
+    `<circle id="pf-dot" r="4" fill="#c1301f" stroke="#fff" stroke-width="1.5" opacity="0"/>`;
+
+  const cursor = svg.querySelector('#pf-cursor');
+  const dot = svg.querySelector('#pf-dot');
+
+  svg.addEventListener('mousemove', ev => {
+    const r = svg.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+    const targetKm = frac * dMax;
+    let i = 0;
+    while (i < d.length - 1 && d[i + 1] < targetKm) i++;
+    cursor.setAttribute('x1', X(i)); cursor.setAttribute('x2', X(i));
+    cursor.setAttribute('opacity', 1);
+    dot.setAttribute('cx', X(i)); dot.setAttribute('cy', Y(i));
+    dot.setAttribute('opacity', 1);
+    readout.textContent = `km ${d[i].toFixed(1)} — ${e[i]} m`;
+    if (hoverDot && track.length > 1) {
+      const ti = Math.round(frac * (track.length - 1));
+      hoverDot.setLatLng(track[ti]);
+      hoverDot.setStyle({ opacity: 1 });
+    }
+  });
+  svg.addEventListener('mouseleave', () => {
+    cursor.setAttribute('opacity', 0); dot.setAttribute('opacity', 0);
+    readout.textContent = 'Profil de elevație — treci cu mouse-ul peste grafic';
+    if (hoverDot) hoverDot.setStyle({ opacity: 0 });
+  });
+})();
+
+function openLightbox(url) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+</script>
+{% endblock %}

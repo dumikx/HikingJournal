@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Tură nouă — Carnet de munte{% endblock %}
+{% block content %}
+<h1>Tură nouă</h1>
+<form class="form-narrow" method="post" enctype="multipart/form-data">
+  <label for="title">Titlu</label>
+  <input type="text" id="title" name="title" placeholder="ex: Peleaga prin Valea Rea" required>
+
+  <div class="form-grid">
+    <div>
+      <label for="date">Data</label>
+      <input type="date" id="date" name="date" value="{{ today }}" required>
+    </div>
+    <div>
+      <label for="marcaj">Marcaj</label>
+      <select id="marcaj" name="marcaj">
+        <option value="">—</option>
+        {% for val, name in marcaje %}<option value="{{ val }}">{{ name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="massif">Masiv</label>
+      <input type="text" id="massif" name="massif" placeholder="ex: Retezat">
+    </div>
+    <div>
+      <label for="peak">Vârf</label>
+      <input type="text" id="peak" name="peak" placeholder="ex: Peleaga 2509m">
+    </div>
+  </div>
+
+  <label for="gpx">Fișier GPX</label>
+  <input type="file" id="gpx" name="gpx" accept=".gpx" required>
+  <div class="hint">Statisticile se calculează automat din track.</div>
+
+  <label for="photos">Poze</label>
+  <input type="file" id="photos" name="photos" accept="image/*" multiple>
+  <div class="hint">Se plasează pe traseu după GPS-ul sau ora din EXIF.</div>
+
+  <label for="notes">Notițe / gânduri</label>
+  <textarea id="notes" name="notes" placeholder="Cum a fost tura..."></textarea>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Salvează tura</button>
+    <a class="btn btn-ghost" href="{{ url_for('trails.index') }}">Renunță</a>
+  </div>
+</form>
+{% endblock %}

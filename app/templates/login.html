@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Login — Carnet de munte{% endblock %}
+{% block content %}
+<div class="login-box">
+  <h1>Autentificare</h1>
+  <form method="post">
+    <label for="username">User</label>
+    <input type="text" id="username" name="username" autofocus autocomplete="username">
+    <label for="password">Parolă</label>
+    <input type="password" id="password" name="password" autocomplete="current-password">
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Intră</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

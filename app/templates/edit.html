@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Editează — {{ trail.title }}{% endblock %}
+{% block content %}
+<h1>Editează tura</h1>
+<form class="form-narrow" method="post" enctype="multipart/form-data">
+  <label for="title">Titlu</label>
+  <input type="text" id="title" name="title" value="{{ trail.title }}" required>
+
+  <div class="form-grid">
+    <div>
+      <label for="date">Data</label>
+      <input type="date" id="date" name="date" value="{{ trail.date.isoformat() }}" required>
+    </div>
+    <div>
+      <label for="marcaj">Marcaj</label>
+      <select id="marcaj" name="marcaj">
+        <option value="">—</option>
+        {% for val, name in marcaje %}
+        <option value="{{ val }}" {% if trail.marcaj == val %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="massif">Masiv</label>
+      <input type="text" id="massif" name="massif" value="{{ trail.massif or '' }}">
+    </div>
+    <div>
+      <label for="peak">Vârf</label>
+      <input type="text" id="peak" name="peak" value="{{ trail.peak or '' }}">
+    </div>
+  </div>
+
+  <label for="photos">Adaugă poze</label>
+  <input type="file" id="photos" name="photos" accept="image/*" multiple>
+  <div class="hint">Pozele noi se plasează pe traseu după EXIF.</div>
+
+  <label for="notes">Notițe / gânduri</label>
+  <textarea id="notes" name="notes">{{ trail.notes or '' }}</textarea>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Salvează</button>
+    <a class="btn btn-ghost" href="{{ url_for('trails.detail', trail_id=trail.id) }}">Renunță</a>
+  </div>
+</form>
+{% endblock %}

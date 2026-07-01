@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h1>Turele mele</h1>
+  <div class="totals">
+    <b>{{ totals.count }}</b> ture · <b>{{ totals.km }}</b> km · <b>{{ "{:,}".format(totals.ascent).replace(",", " ") }}</b> m urcare
+  </div>
+</div>
+
+<div id="map"></div>
+
+<form class="filters" method="get">
+  <select name="year" onchange="this.form.submit()">
+    <option value="">Toți anii</option>
+    {% for y in years %}
+    <option value="{{ y }}" {% if y == sel_year %}selected{% endif %}>{{ y }}</option>
+    {% endfor %}
+  </select>
+  <select name="massif" onchange="this.form.submit()">
+    <option value="">Toate masivele</option>
+    {% for m in massifs %}
+    <option value="{{ m }}" {% if m == sel_massif %}selected{% endif %}>{{ m }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+{% if trails %}
+<div class="cards">
+  {% for t in trails %}
+  <a class="card" href="{{ url_for('trails.detail', trail_id=t.id) }}" id="card-{{ t.id }}">
+    {% if t.marcaj %}<span class="blaze" data-m="{{ t.marcaj }}" title="{{ t.marcaj }}"></span>{% endif %}
+    <h3>{{ t.title }}</h3>
+    <div class="meta">{{ t.date.strftime("%d.%m.%Y") }}{% if t.massif %} · {{ t.massif }}{% endif %}{% if t.peak %} · {{ t.peak }}{% endif %}</div>
+    {% set sp = t.spark_points() %}
+    {% if sp %}
+    <svg class="spark" width="160" height="36" viewBox="0 0 160 36" aria-hidden="true">
+      <polygon points="2,34 {{ sp }} 158,34"></polygon>
+      <polyline points="{{ sp }}"></polyline>
+    </svg>
+    {% endif %}
+    <div class="stats">
+      <span><b>{{ t.distance_km }}</b> km</span>
+      <span>↑ <b>{{ t.ascent_m }}</b> m</span>
+      {% if t.duration_min %}<span><b>{{ t.duration_min // 60 }}h{{ '%02d' % (t.duration_min % 60) }}</b></span>{% endif %}
+      {% if t.photos %}<span><b>{{ t.photos|length }}</b> poze</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">Nicio tură încă. Adaugă prima cu „Tură nouă".</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const trails = {{ map_data|safe }};
+const map = L.map('map', { scrollWheelZoom: true });
+L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom: 17,
+  attribution: 'Hartă: © OpenStreetMap, SRTM | © OpenTopoMap (CC-BY-SA)'
+}).addTo(map);
+
+if (trails.length) {
+  const group = L.featureGroup();
+  trails.forEach(t => {
+    if (t.track && t.track.length > 1) {
+      L.polyline(t.track, { color: '#22332c', weight: 2.5, opacity: .75 }).addTo(group);
+    }
+    const m = L.circleMarker([t.lat, t.lng], {
+      radius: 7, color: '#22332c', weight: 1.5, fillColor: '#c1301f', fillOpacity: .95
+    }).addTo(group);
+    m.bindPopup(
+      `<b>${t.title}</b><br>${t.date} · ${t.distance_km ?? '?'} km · ↑${t.ascent_m ?? '?'} m` +
+      `<br><a href="${t.url}">Deschide tura →</a>`
+    );
+    m.on('mouseover', () => m.setStyle({ radius: 10 }));
+    m.on('mouseout',  () => m.setStyle({ radius: 7 }));
+  });
+  group.addTo(map);
+  map.fitBounds(group.getBounds().pad(0.15));
+} else {
+  map.setView([45.75, 24.75], 7); // Carpații, implicit
+}
+</script>
+{% endblock %}
