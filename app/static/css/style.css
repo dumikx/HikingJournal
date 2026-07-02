@@ -258,6 +258,11 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px;
   .form-grid { grid-template-columns: 1fr; }
   .statbar { grid-template-columns: repeat(3, 1fr); }
   .statbar .stat { border-bottom: 1.5px solid var(--line); }
+  /* pe telefon: titlul pe latimea intreaga, actiunile pe randul urmator */
+  .trail-head .line1 { flex-wrap: wrap; }
+  .trail-head .line1 h1 { width: 100%; }
+  .trail-actions { margin-left: 0; width: 100%; flex-wrap: wrap; }
+  .topbar { flex-wrap: wrap; gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }

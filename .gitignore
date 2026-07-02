@@ -4,3 +4,4 @@ instance/
 .env
 *.db
 .venv/
+.claude/
