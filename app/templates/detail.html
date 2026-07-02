@@ -130,6 +130,29 @@ photos.forEach(p => {
   const cursor = svg.querySelector('#pf-cursor');
   const dot = svg.querySelector('#pf-dot');
 
+  // Distanta cumulata pe track-ul simplificat: Douglas-Peucker lasa puncte
+  // rare pe portiuni drepte si dese pe serpentine, deci pozitia pe harta
+  // trebuie cautata dupa kilometraj, nu dupa indexul proportional in array.
+  const cum = [0];
+  for (let i = 1; i < track.length; i++) {
+    const dLat = (track[i][0] - track[i - 1][0]) * Math.PI / 180;
+    const dLng = (track[i][1] - track[i - 1][1]) * Math.PI / 180;
+    const mLat = (track[i][0] + track[i - 1][0]) / 2 * Math.PI / 180;
+    const dLngScaled = dLng * Math.cos(mLat);
+    cum.push(cum[i - 1] + 6371 * Math.sqrt(dLat * dLat + dLngScaled * dLngScaled));
+  }
+  const cumTotal = cum[cum.length - 1] || 1;
+
+  function trackPosAt(frac) {
+    const target = frac * cumTotal;
+    let i = 0;
+    while (i < cum.length - 2 && cum[i + 1] < target) i++;
+    const seg = cum[i + 1] - cum[i];
+    const t = seg > 0 ? Math.min(1, Math.max(0, (target - cum[i]) / seg)) : 0;
+    return [track[i][0] + (track[i + 1][0] - track[i][0]) * t,
+            track[i][1] + (track[i + 1][1] - track[i][1]) * t];
+  }
+
   svg.addEventListener('mousemove', ev => {
     const r = svg.getBoundingClientRect();
     const frac = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
@@ -142,8 +165,7 @@ photos.forEach(p => {
     dot.setAttribute('opacity', 1);
     readout.textContent = `km ${d[i].toFixed(1)} — ${e[i]} m`;
     if (hoverDot && track.length > 1) {
-      const ti = Math.round(frac * (track.length - 1));
-      hoverDot.setLatLng(track[ti]);
+      hoverDot.setLatLng(trackPosAt(frac));
       hoverDot.setStyle({ opacity: 1 });
     }
   });
