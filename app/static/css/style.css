@@ -170,7 +170,22 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px;
                  margin: 26px 0 12px; }
 .section-head { display: flex; align-items: baseline;
                 justify-content: space-between; gap: 12px; }
+.section-actions { display: flex; gap: 8px; }
 .btn-small { font-size: 11px; padding: 4px 10px; }
+
+/* selectie multipla in galerie */
+.select-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+              margin-bottom: 12px; font-family: var(--mono); font-size: 13px; }
+.select-bar .btn:disabled { opacity: .45; cursor: default; }
+.gallery.selecting form { display: none; }
+.gallery.selecting figure { cursor: pointer; }
+.gallery figure.selected img { outline: 3px solid var(--blaze); outline-offset: -3px; }
+.gallery figure.selected::after {
+  content: "\2713"; position: absolute; top: 6px; right: 6px;
+  width: 22px; height: 22px; background: var(--blaze); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; pointer-events: none;
+}
 
 #profile-wrap { border: 1.5px solid var(--line); background: var(--card);
                 padding: 10px 12px 4px; margin-top: 14px; }

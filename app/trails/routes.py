@@ -374,6 +374,36 @@ def delete(trail_id):
     return redirect(url_for("trails.index"))
 
 
+@bp.route("/trail/<int:trail_id>/photos/delete", methods=["POST"])
+@login_required
+def delete_photos_bulk(trail_id):
+    """Sterge mai multe poze odata (selectie multipla din galerie).
+
+    Sterge doar poze care apartin turei — id-urile straine sunt ignorate.
+    """
+    trail = db.session.get(Trail, trail_id) or abort(404)
+    data = request.get_json(silent=True) or {}
+    ids = data.get("photo_ids")
+    if not isinstance(ids, list) or not 0 < len(ids) <= 500:
+        return jsonify(error="Trimite o listă de id-uri de poze (1–500)."), 400
+    try:
+        ids = [int(i) for i in ids]
+    except (TypeError, ValueError):
+        return jsonify(error="Id-uri invalide."), 400
+
+    photos = Photo.query.filter(Photo.trail_id == trail.id, Photo.id.in_(ids)).all()
+    st = _storage()
+    for p in photos:
+        for k in filter(None, (p.key, p.original_key)):
+            try:
+                st.delete(k)
+            except Exception:
+                current_app.logger.exception("Nu am putut sterge obiectul %s", k)
+        db.session.delete(p)
+    db.session.commit()
+    return jsonify(deleted=len(photos))
+
+
 @bp.route("/photo/<int:photo_id>/delete", methods=["POST"])
 @login_required
 def delete_photo(photo_id):

@@ -220,7 +220,34 @@ print("register (GPS pastrat, potrivire timestamp pe GPX recitit, chei validate)
 html = c.get(f"/trail/{t2_id}").get_data(as_text=True)
 assert "Poze (3)" in html and "orig_url" in html and "lightbox-orig" in html
 assert "add-photos-btn" in html, "lipseste butonul de adaugare poze din detaliu"
+assert "select-btn" in html and "sel-delete" in html, "lipseste selectia multipla"
 print("detaliu cu varianta display + link Original + buton adaugare: OK")
+
+# 5b. stergere in masa: 2 poze proprii + un id strain (ignorat) + un id inexistent
+with app.app_context():
+    from app.models import Photo
+    ph2 = {p.filename: p.id for p in Photo.query.filter_by(trail_id=t2_id).all()}
+    foreign_id = Photo.query.filter_by(trail_id=trail_id).first().id
+    tin_display = Photo.query.get(ph2["timp_in.jpg"]).key
+    st = app.extensions["storage"]
+    tin_path = st.path_for(tin_display)
+import os as _os
+assert _os.path.exists(tin_path)
+r = c.post(f"/trail/{t2_id}/photos/delete", json={
+    "photo_ids": [ph2["timp_in.jpg"], ph2["timp_out.jpg"], foreign_id, 999999],
+})
+assert r.status_code == 200, f"stergere in masa esuata: {r.status_code}"
+assert r.get_json()["deleted"] == 2, "trebuia sa stearga exact 2 poze"
+assert not _os.path.exists(tin_path), "obiectul display nu a fost sters din storage"
+with app.app_context():
+    from app.models import Photo
+    assert Photo.query.filter_by(trail_id=t2_id).count() == 1
+    assert Photo.query.get(foreign_id) is not None, "a sters o poza din alta tura!"
+assert "Poze (1)" in c.get(f"/trail/{t2_id}").get_data(as_text=True)
+# lista goala -> 400
+r = c.post(f"/trail/{t2_id}/photos/delete", json={"photo_ids": []})
+assert r.status_code == 400
+print("stergere in masa (doar pozele turei, storage curatat): OK")
 
 # 6. stergerea turei curata si originalele din storage
 import os as _os

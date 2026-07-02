@@ -41,16 +41,26 @@
 
 <div class="section-title section-head">
   <span>Poze ({{ photos|length }})</span>
-  <button class="btn btn-ghost btn-small" type="button" id="add-photos-btn">+ Adaugă poze</button>
+  <span class="section-actions">
+    {% if photos %}
+    <button class="btn btn-ghost btn-small" type="button" id="select-btn">Selectează</button>
+    {% endif %}
+    <button class="btn btn-ghost btn-small" type="button" id="add-photos-btn">+ Adaugă poze</button>
+  </span>
 </div>
 <input type="file" id="add-photos" accept="image/*" multiple hidden>
 <div id="upload-list" class="upload-list"></div>
 <div id="add-photos-error" class="form-error" style="display:none"></div>
-<div class="gallery">
+<div id="select-bar" class="select-bar" style="display:none">
+  <span id="sel-count">0 selectate</span>
+  <button class="btn btn-ghost btn-small" type="button" id="sel-all">Selectează tot</button>
+  <button class="btn btn-danger btn-small" type="button" id="sel-delete" disabled>Șterge selectatele</button>
+  <button class="btn btn-ghost btn-small" type="button" id="sel-cancel">Renunță</button>
+</div>
+<div class="gallery" id="gallery">
   {% for p in photos %}
-  <figure>
-    <img src="{{ p.url }}" alt="{{ p.caption or trail.title }}" loading="lazy"
-         onclick="openLightbox({{ loop.index0 }})">
+  <figure data-id="{{ p.id }}" data-index="{{ loop.index0 }}">
+    <img src="{{ p.url }}" alt="{{ p.caption or trail.title }}" loading="lazy">
     {% if p.taken_at %}<span class="ph-time">{{ p.taken_at }}</span>{% endif %}
     <form method="post" action="{{ url_for('trails.delete_photo', photo_id=p.id) }}"
           onsubmit="return confirm('Ștergi poza?');">
@@ -220,6 +230,82 @@ lb.addEventListener('touchend', ev => {
   lbTouchX = null;
   if (Math.abs(dx) > 40) lbStep(dx > 0 ? -1 : 1);
 });
+
+/* --- selectie multipla si stergere in masa --- */
+(function () {
+  const gallery = document.getElementById('gallery');
+  const selectBtn = document.getElementById('select-btn');
+  const bar = document.getElementById('select-bar');
+  const countEl = document.getElementById('sel-count');
+  const delBtn = document.getElementById('sel-delete');
+  const selected = new Set();
+  let selecting = false;
+
+  // click delegat: in mod normal deschide lightbox-ul, in selectie bifeaza
+  gallery.addEventListener('click', ev => {
+    const fig = ev.target.closest('figure');
+    if (!fig || ev.target.closest('form')) return;
+    if (!selecting) {
+      openLightbox(parseInt(fig.dataset.index, 10));
+      return;
+    }
+    const id = parseInt(fig.dataset.id, 10);
+    if (selected.has(id)) { selected.delete(id); fig.classList.remove('selected'); }
+    else { selected.add(id); fig.classList.add('selected'); }
+    update();
+  });
+
+  function update() {
+    countEl.textContent = selected.size + ' selectate';
+    delBtn.disabled = !selected.size;
+  }
+
+  function setMode(on) {
+    selecting = on;
+    gallery.classList.toggle('selecting', on);
+    bar.style.display = on ? 'flex' : 'none';
+    if (selectBtn) selectBtn.style.display = on ? 'none' : '';
+    if (!on) {
+      selected.clear();
+      gallery.querySelectorAll('figure.selected').forEach(f => f.classList.remove('selected'));
+    }
+    update();
+  }
+
+  if (selectBtn) selectBtn.addEventListener('click', () => setMode(true));
+  document.getElementById('sel-cancel').addEventListener('click', () => setMode(false));
+
+  document.getElementById('sel-all').addEventListener('click', () => {
+    gallery.querySelectorAll('figure').forEach(f => {
+      selected.add(parseInt(f.dataset.id, 10));
+      f.classList.add('selected');
+    });
+    update();
+  });
+
+  delBtn.addEventListener('click', async () => {
+    if (!selected.size) return;
+    if (!confirm('Ștergi definitiv ' + selected.size + ' poze?')) return;
+    delBtn.disabled = true;
+    delBtn.textContent = 'Șterg...';
+    try {
+      const r = await fetch('/trail/{{ trail.id }}/photos/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photo_ids: Array.from(selected) }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => null);
+        throw new Error((data && data.error) || ('HTTP ' + r.status));
+      }
+      location.reload();
+    } catch (e) {
+      alert('Ștergerea a eșuat: ' + (e.message || e));
+      delBtn.disabled = false;
+      delBtn.textContent = 'Șterge selectatele';
+    }
+  });
+})();
 
 /* --- adaugare poze direct din pagina turei --- */
 (function () {
