@@ -168,6 +168,9 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px;
                  text-transform: uppercase; letter-spacing: .05em;
                  border-bottom: 2px solid var(--ink); padding-bottom: 4px;
                  margin: 26px 0 12px; }
+.section-head { display: flex; align-items: baseline;
+                justify-content: space-between; gap: 12px; }
+.btn-small { font-size: 11px; padding: 4px 10px; }
 
 #profile-wrap { border: 1.5px solid var(--line); background: var(--card);
                 padding: 10px 12px 4px; margin-top: 14px; }

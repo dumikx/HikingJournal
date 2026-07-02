@@ -39,8 +39,13 @@
   <svg id="profile" width="100%" height="150" preserveAspectRatio="none"></svg>
 </div>
 
-{% if photos %}
-<div class="section-title">Poze ({{ photos|length }})</div>
+<div class="section-title section-head">
+  <span>Poze ({{ photos|length }})</span>
+  <button class="btn btn-ghost btn-small" type="button" id="add-photos-btn">+ Adaugă poze</button>
+</div>
+<input type="file" id="add-photos" accept="image/*" multiple hidden>
+<div id="upload-list" class="upload-list"></div>
+<div id="add-photos-error" class="form-error" style="display:none"></div>
 <div class="gallery">
   {% for p in photos %}
   <figure>
@@ -54,7 +59,6 @@
   </figure>
   {% endfor %}
 </div>
-{% endif %}
 
 {% if trail.notes %}
 <div class="section-title">Notițe</div>
@@ -69,6 +73,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="{{ url_for('static', filename='js/photo-upload.js') }}"></script>
 <script>
 const track = {{ track_json|safe }};
 const photos = {{ photos_json|safe }};
@@ -181,5 +187,46 @@ function openLightbox(url, origUrl) {
   document.getElementById('lightbox-orig').href = origUrl || url;
   document.getElementById('lightbox').classList.add('open');
 }
+
+/* --- adaugare poze direct din pagina turei --- */
+(function () {
+  const btn = document.getElementById('add-photos-btn');
+  const input = document.getElementById('add-photos');
+  const errBox = document.getElementById('add-photos-error');
+
+  btn.addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    errBox.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Urc pozele...';
+
+    let result;
+    try {
+      result = await uploadTrailPhotos({{ trail.id }}, files,
+                                       document.getElementById('upload-list'));
+    } catch (e) {
+      errBox.textContent = 'Upload eșuat: ' + (e.message || e) + ' — încearcă din nou.';
+      errBox.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '+ Adaugă poze';
+      input.value = '';
+      return;
+    }
+    input.value = '';
+
+    if (result.failed) {
+      // pozele reusite sunt salvate; lasam erorile vizibile, fara reload
+      errBox.textContent = result.failed + ' poze au eșuat (detalii mai sus), ' +
+        result.ok + ' salvate — apar la reîncărcarea paginii.';
+      errBox.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '+ Adaugă poze';
+      return;
+    }
+    location.reload();
+  });
+})();
 </script>
 {% endblock %}

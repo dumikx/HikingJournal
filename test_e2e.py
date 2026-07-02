@@ -219,7 +219,8 @@ print("register (GPS pastrat, potrivire timestamp pe GPX recitit, chei validate)
 # 5. pagina detaliu: galerie pe display, link Original in lightbox
 html = c.get(f"/trail/{t2_id}").get_data(as_text=True)
 assert "Poze (3)" in html and "orig_url" in html and "lightbox-orig" in html
-print("detaliu cu varianta display + link Original: OK")
+assert "add-photos-btn" in html, "lipseste butonul de adaugare poze din detaliu"
+print("detaliu cu varianta display + link Original + buton adaugare: OK")
 
 # 6. stergerea turei curata si originalele din storage
 import os as _os
