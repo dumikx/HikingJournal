@@ -4,9 +4,28 @@ Toti parametrii vin din Config (GPX_* / PHOTO_*), ca sa poata fi ajustati
 din variabile de mediu fara modificari de cod.
 """
 import math
+import re
 from datetime import timedelta
 
 import gpxpy
+
+
+def _fix_unbound_prefixes(xml_text):
+    """Repara GPX-uri cu prefixe XML nedeclarate (ex: gpxtpx: fara xmlns).
+
+    Unele tool-uri (mergere, convertoare) emit extensii cu prefixe fara sa
+    declare namespace-ul — XML invalid pe care parserul strict il respinge.
+    Declaram prefixele lipsa pe tagul radacina si lasam parsarea sa continue;
+    extensiile oricum nu ne intereseaza. Intoarce None daca nu e cazul.
+    """
+    used = set(re.findall(r"</?([A-Za-z_][\w.-]*):", xml_text))
+    declared = set(re.findall(r"xmlns:([A-Za-z_][\w.-]*)\s*=", xml_text))
+    missing = used - declared - {"xml"}
+    if not missing:
+        return None
+    decls = " ".join(f'xmlns:{p}="urn:ignore:{p}"' for p in sorted(missing))
+    fixed = re.sub(r"<gpx\b", f"<gpx {decls} ", xml_text, count=1)
+    return fixed if fixed != xml_text else None
 
 
 def _haversine_m(lat1, lon1, lat2, lon2):
@@ -62,7 +81,16 @@ def _rdp(points, tolerance_m):
 
 def parse_gpx(file_obj, config):
     """Intoarce dict cu statistici, traseu simplificat si profil de elevatie."""
-    gpx = gpxpy.parse(file_obj)
+    raw = file_obj.read()
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8-sig", errors="replace")
+    try:
+        gpx = gpxpy.parse(raw)
+    except Exception:
+        fixed = _fix_unbound_prefixes(raw)
+        if fixed is None:
+            raise
+        gpx = gpxpy.parse(fixed)
 
     pts = []  # (lat, lon, ele, time)
     for track in gpx.tracks:

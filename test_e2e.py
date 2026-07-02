@@ -139,6 +139,33 @@ r = c.post(f"/photo/{photo_out_id}/delete", follow_redirects=True)
 assert "Poze (1)" in r.get_data(as_text=True)
 print("stergere poza: OK")
 
+# --- GPX cu prefix XML nedeclarat (ex: gpxtpx: de la tool-uri de merge) ---
+bad_ns_gpx = (
+    '<?xml version="1.0" encoding="UTF-8"?>'
+    '<gpx version="1.1" creator="GPX Merger" xmlns="http://www.topografix.com/GPX/1/1">'
+    '<trk><trkseg>'
+    '<trkpt lat="45.4337" lon="22.8938"><ele>1027</ele>'
+    '<time>2026-06-13T02:31:26.454Z</time>'
+    '<extensions><gpxtpx:TrackPointExtension><gpxtpx:cad>42</gpxtpx:cad>'
+    '</gpxtpx:TrackPointExtension></extensions></trkpt>'
+    '<trkpt lat="45.4338" lon="22.8939"><ele>1030</ele>'
+    '<time>2026-06-13T02:31:40.000Z</time>'
+    '<extensions><gpxtpx:TrackPointExtension><gpxtpx:cad>43</gpxtpx:cad>'
+    '</gpxtpx:TrackPointExtension></extensions></trkpt>'
+    '</trkseg></trk></gpx>'
+).encode()
+r = c.post(
+    "/trail/new",
+    data={"title": "Test NS", "date": "2026-06-13",
+          "gpx": (io.BytesIO(bad_ns_gpx), "merged.gpx")},
+    content_type="multipart/form-data",
+    headers={"Accept": "application/json"},
+)
+assert r.status_code == 200, f"GPX cu prefix nedeclarat respins: {r.get_data(as_text=True)}"
+ns_trail_id = r.get_json()["trail_id"]
+c.post(f"/trail/{ns_trail_id}/delete", follow_redirects=True)
+print("GPX cu prefix XML nedeclarat (reparat automat): OK")
+
 # --- flux nou: upload direct (presign -> PUT -> register) ---
 # 1. creare tura prin AJAX (cum face new.html): raspuns JSON cu trail_id
 r = c.post(
