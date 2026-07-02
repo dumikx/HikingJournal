@@ -54,15 +54,44 @@ async function photoDecodeImage(file) {
   }
 }
 
+/* HEIC (iPhone): majoritatea browserelor nu-l decodeaza nativ in canvas.
+   Incarcam heic2any (libheif/WASM) de pe CDN doar cand chiar intalnim
+   un HEIC, si-l convertim in JPEG inainte de redimensionare. */
+let photoHeicLoader = null;
+function photoLoadHeic2any() {
+  if (!photoHeicLoader) {
+    photoHeicLoader = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+      s.onload = () => resolve(window.heic2any);
+      s.onerror = () => reject(new Error("nu am putut încărca decodorul HEIC"));
+      document.head.appendChild(s);
+    });
+  }
+  return photoHeicLoader;
+}
+
+function photoLooksHeic(file) {
+  return /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+}
+
 /* Varianta display: max 2560px pe latura lunga, JPEG ~0.85.
-   Daca decodarea esueaza (ex: HEIC pe un browser fara suport), intoarce
-   null si folosim originalul si ca display. */
+   HEIC se converteste intai in JPEG; daca formatul chiar nu poate fi
+   decodat, intoarce null si poza esueaza cu mesaj clar. */
 async function photoMakeDisplayBlob(file) {
   let img;
   try {
     img = await photoDecodeImage(file);
   } catch (e) {
-    return null;
+    if (!photoLooksHeic(file)) return null;
+    try {
+      const heic2any = await photoLoadHeic2any();
+      let jpeg = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+      if (Array.isArray(jpeg)) jpeg = jpeg[0];
+      img = await photoDecodeImage(jpeg);
+    } catch (e2) {
+      return null;
+    }
   }
   const w = img.width, h = img.height;
   const scale = Math.min(1, PHOTO_MAX_DISPLAY_PX / Math.max(w, h));
@@ -158,24 +187,22 @@ async function uploadTrailPhotos(trailId, files, listEl) {
 
       u.state("redimensionez");
       const displayBlob = await photoMakeDisplayBlob(file);
+      if (!displayBlob) {
+        // fara varianta display poza ar aparea stricata in galerie —
+        // mai bine esec explicit decat miniatura moarta
+        throw new Error("format nedecodabil — convertește poza în JPEG și reîncearcă");
+      }
 
       // progres combinat: originalul + varianta display, ponderate pe bytes
-      const dispSize = displayBlob ? displayBlob.size : 0;
-      const total = file.size + dispSize;
+      const total = file.size + displayBlob.size;
 
       u.state("urc originalul");
       await photoPut(grant.original_put_url, file, grant.original_content_type,
         (f) => u.progress((f * file.size) / total));
 
-      if (displayBlob) {
-        u.state("urc varianta redimensionată");
-        await photoPut(grant.display_put_url, displayBlob, "image/jpeg",
-          (f) => u.progress((file.size + f * dispSize) / total));
-      } else {
-        // nu am putut decoda (ex. HEIC) — originalul devine si display
-        u.state("fără redimensionare (format nedecodabil)");
-        await photoPut(grant.display_put_url, file, "image/jpeg", null);
-      }
+      u.state("urc varianta redimensionată");
+      await photoPut(grant.display_put_url, displayBlob, "image/jpeg",
+        (f) => u.progress((file.size + f * displayBlob.size) / total));
 
       registered.push({
         original_key: grant.original_key,
