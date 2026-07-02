@@ -90,7 +90,8 @@ class Trail(db.Model):
 class Photo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     trail_id = db.Column(db.Integer, db.ForeignKey("trail.id"), nullable=False)
-    key = db.Column(db.String(300), nullable=False)   # cheia obiectului in storage
+    key = db.Column(db.String(300), nullable=False)   # varianta display (redimensionata)
+    original_key = db.Column(db.String(300))          # originalul, la rezolutie intreaga
     filename = db.Column(db.String(200))
     caption = db.Column(db.String(300))
     taken_at = db.Column(db.DateTime)                 # din EXIF, ora locala

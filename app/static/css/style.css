@@ -195,6 +195,26 @@ h1 { font-family: var(--display); font-weight: 800; font-size: 30px;
             display: none; align-items: center; justify-content: center; z-index: 2000; }
 #lightbox.open { display: flex; }
 #lightbox img { max-width: 92vw; max-height: 90vh; border: 2px solid var(--paper); }
+#lightbox-orig { position: absolute; right: 18px; bottom: 18px;
+                 background: var(--paper); }
+
+/* ---------- upload direct in R2: progres per poza ---------- */
+.upload-list { display: none; margin-top: 14px; }
+.up-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px auto;
+          gap: 10px; align-items: center; padding: 6px 0;
+          border-bottom: 1px solid var(--line);
+          font-family: var(--mono); font-size: 12px; }
+.up-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.up-track { height: 8px; background: #fff; border: 1px solid var(--line); }
+.up-bar { height: 100%; width: 0; background: var(--ink); transition: width .15s; }
+.up-done .up-bar { background: var(--ink); }
+.up-failed .up-bar { background: var(--blaze); }
+.up-failed .up-status { color: var(--blaze); }
+
+.form-error { margin-top: 14px; border: 1.5px solid var(--blaze);
+              border-left: 6px solid var(--blaze); background: var(--card);
+              padding: 10px 14px; font-family: var(--mono); font-size: 13px;
+              color: var(--blaze); }
 
 /* ---------- formulare ture ---------- */
 .form-narrow { max-width: 640px; }

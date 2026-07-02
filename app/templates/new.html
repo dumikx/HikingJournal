@@ -2,7 +2,7 @@
 {% block title %}Tură nouă — Carnet de munte{% endblock %}
 {% block content %}
 <h1>Tură nouă</h1>
-<form class="form-narrow" method="post" enctype="multipart/form-data">
+<form class="form-narrow" method="post" enctype="multipart/form-data" id="trail-form">
   <label for="title">Titlu</label>
   <input type="text" id="title" name="title" placeholder="ex: Peleaga prin Valea Rea" required>
 
@@ -34,14 +34,89 @@
 
   <label for="photos">Poze</label>
   <input type="file" id="photos" name="photos" accept="image/*" multiple>
-  <div class="hint">Se plasează pe traseu după GPS-ul sau ora din EXIF.</div>
+  <div class="hint">Se urcă direct în storage, apoi se plasează pe traseu după GPS-ul sau ora din EXIF.</div>
 
   <label for="notes">Notițe / gânduri</label>
   <textarea id="notes" name="notes" placeholder="Cum a fost tura..."></textarea>
 
+  <div id="upload-list" class="upload-list"></div>
+  <div id="form-error" class="form-error" style="display:none"></div>
+
   <div class="form-actions">
-    <button class="btn btn-primary" type="submit">Salvează tura</button>
+    <button class="btn btn-primary" type="submit" id="save-btn">Salvează tura</button>
     <a class="btn btn-ghost" href="{{ url_for('trails.index') }}">Renunță</a>
   </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="{{ url_for('static', filename='js/photo-upload.js') }}"></script>
+<script>
+/* Tura se creeaza intai (GPX-ul e mic, trece prin server), apoi pozele
+   se urca direct in R2. Daca o poza esueaza, restul continua si tura
+   ramane creata — nu se pierde nimic. */
+(function () {
+  const form = document.getElementById('trail-form');
+  const saveBtn = document.getElementById('save-btn');
+  const errBox = document.getElementById('form-error');
+  const photosInput = document.getElementById('photos');
+  const uploadList = document.getElementById('upload-list');
+
+  function showError(msg) {
+    errBox.textContent = msg;
+    errBox.style.display = 'block';
+  }
+
+  form.addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    errBox.style.display = 'none';
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvez...';
+
+    const files = Array.from(photosInput.files || []);
+    const fd = new FormData(form);
+    fd.delete('photos');  // pozele NU trec prin server
+
+    let created;
+    try {
+      const r = await fetch(form.action || location.href, {
+        method: 'POST', body: fd, headers: { 'Accept': 'application/json' },
+      });
+      created = await r.json();
+      if (!r.ok) throw new Error(created.error || ('HTTP ' + r.status));
+    } catch (e) {
+      showError('Nu am putut salva tura: ' + (e.message || e));
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Salvează tura';
+      return;
+    }
+
+    if (!files.length) {
+      location.href = created.redirect;
+      return;
+    }
+
+    saveBtn.textContent = 'Urc pozele...';
+    let result;
+    try {
+      result = await uploadTrailPhotos(created.trail_id, files, uploadList);
+    } catch (e) {
+      showError('Tura e salvată, dar upload-ul pozelor a eșuat: ' + (e.message || e) +
+                ' — poți adăuga pozele din Editează.');
+      saveBtn.outerHTML = '<a class="btn btn-primary" href="' + created.redirect + '">Vezi tura</a>';
+      return;
+    }
+    photosInput.value = '';
+
+    if (result.failed) {
+      showError(result.failed + ' poze au eșuat (detalii mai sus). ' +
+                'Restul de ' + result.ok + ' sunt salvate. Le poți reîncerca din Editează.');
+      saveBtn.outerHTML = '<a class="btn btn-primary" href="' + created.redirect + '">Vezi tura</a>';
+      return;
+    }
+    location.href = created.redirect;
+  });
+})();
+</script>
 {% endblock %}

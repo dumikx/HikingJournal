@@ -139,6 +139,99 @@ r = c.post(f"/photo/{photo_out_id}/delete", follow_redirects=True)
 assert "Poze (1)" in r.get_data(as_text=True)
 print("stergere poza: OK")
 
+# --- flux nou: upload direct (presign -> PUT -> register) ---
+# 1. creare tura prin AJAX (cum face new.html): raspuns JSON cu trail_id
+r = c.post(
+    "/trail/new",
+    data={"title": "Test Direct Upload", "date": "2026-06-27",
+          "gpx": (io.BytesIO(gpx), "tura2.gpx")},
+    content_type="multipart/form-data",
+    headers={"Accept": "application/json"},
+)
+assert r.status_code == 200, f"creare AJAX esuata: {r.status_code}"
+j = r.get_json()
+assert j["trail_id"] and j["redirect"], "raspunsul AJAX nu are trail_id/redirect"
+t2_id = j["trail_id"]
+print("creare tura prin AJAX (JSON): OK")
+
+# 2. presign: originale + variante display pentru 3 poze
+r = c.post(f"/trail/{t2_id}/photos/presign", json={
+    "files": [{"name": "gps.jpg", "type": "image/jpeg"},
+              {"name": "timp_in.jpg", "type": "image/jpeg"},
+              {"name": "timp_out.jpg", "type": "image/jpeg"}],
+})
+assert r.status_code == 200, f"presign esuat: {r.status_code}"
+grants = r.get_json()["files"]
+assert len(grants) == 3
+for g in grants:
+    assert g["original_key"].startswith(f"trails/{t2_id}/photos/")
+    assert g["display_key"].startswith(f"trails/{t2_id}/photos/")
+    assert g["original_put_url"] and g["display_put_url"]
+# tip non-imagine respins
+r = c.post(f"/trail/{t2_id}/photos/presign",
+           json={"files": [{"name": "x.exe", "type": "application/x-msdownload"}]})
+assert r.status_code == 400, "presign a acceptat un tip non-imagine"
+print("presign (chei + URL-uri PUT, tipuri validate): OK")
+
+# 3. PUT direct in storage (echivalentul local al PUT-ului presemnat R2)
+photo_bytes = make_photo(datetime(2026, 6, 27, 12, 0))
+for g in grants:
+    for url in (g["original_put_url"], g["display_put_url"]):
+        r = c.put(url, data=photo_bytes, content_type="image/jpeg")
+        assert r.status_code == 204, f"PUT local esuat: {url} -> {r.status_code}"
+# cheie in afara formatului generat (alt kind decat photos) -> respinsa
+r = c.put("/media-put/trails/999/gpx/x.gpx", data=b"x", content_type="image/jpeg")
+assert r.status_code == 404, "PUT local a acceptat o cheie invalida"
+print("PUT direct in storage local: OK")
+
+# 4. register: GPS explicit / doar timestamp in fereastra / timestamp in afara
+r = c.post(f"/trail/{t2_id}/photos/register", json={"photos": [
+    {"original_key": grants[0]["original_key"], "display_key": grants[0]["display_key"],
+     "filename": "gps.jpg", "taken_at": "2026:06:27 11:00:00",
+     "lat": 45.3702, "lng": 22.8821},
+    {"original_key": grants[1]["original_key"], "display_key": grants[1]["display_key"],
+     "filename": "timp_in.jpg", "taken_at": "2026:06:27 11:30:00"},
+    {"original_key": grants[2]["original_key"], "display_key": grants[2]["display_key"],
+     "filename": "timp_out.jpg", "taken_at": "2026:06:27 22:00:00"},
+]})
+assert r.status_code == 200, f"register esuat: {r.status_code} {r.get_data(as_text=True)}"
+assert r.get_json()["added"] == 3
+# cheie care nu apartine turei -> respinsa, nimic salvat
+r = c.post(f"/trail/{t2_id}/photos/register", json={"photos": [
+    {"display_key": f"trails/{trail_id}/photos/furt.jpg"},
+]})
+assert r.status_code == 400, "register a acceptat o cheie straina"
+
+with app.app_context():
+    from app.models import Photo
+    ph2 = {p.filename: p for p in Photo.query.filter_by(trail_id=t2_id).all()}
+    assert len(ph2) == 3
+    p_gps = ph2["gps.jpg"]
+    assert p_gps.on_track and abs(p_gps.lat - 45.3702) < 1e-6, "GPS-ul explicit nu a fost pastrat"
+    assert p_gps.original_key and p_gps.original_key != p_gps.key
+    p_tin = ph2["timp_in.jpg"]
+    assert p_tin.on_track and p_tin.lat is not None, "poza cu timestamp in fereastra nu a fost plasata"
+    p_tout = ph2["timp_out.jpg"]
+    assert not p_tout.on_track and p_tout.lat is None, "poza din afara ferestrei a fost plasata gresit"
+    assert p_tin.taken_at.hour == 11 and p_tin.taken_at.minute == 30
+print("register (GPS pastrat, potrivire timestamp pe GPX recitit, chei validate): OK")
+
+# 5. pagina detaliu: galerie pe display, link Original in lightbox
+html = c.get(f"/trail/{t2_id}").get_data(as_text=True)
+assert "Poze (3)" in html and "orig_url" in html and "lightbox-orig" in html
+print("detaliu cu varianta display + link Original: OK")
+
+# 6. stergerea turei curata si originalele din storage
+import os as _os
+with app.app_context():
+    st = app.extensions["storage"]
+    orig_path = st.path_for(grants[0]["original_key"])
+    assert _os.path.exists(orig_path)
+r = c.post(f"/trail/{t2_id}/delete", follow_redirects=True)
+assert r.status_code == 200
+assert not _os.path.exists(orig_path), "originalul nu a fost sters din storage"
+print("stergere tura cu originale (storage curatat): OK")
+
 # --- stergere tura ---
 r = c.post(f"/trail/{trail_id}/delete", follow_redirects=True)
 assert "Nicio tură încă" in r.get_data(as_text=True)

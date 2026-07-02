@@ -2,7 +2,7 @@
 {% block title %}Editează — {{ trail.title }}{% endblock %}
 {% block content %}
 <h1>Editează tura</h1>
-<form class="form-narrow" method="post" enctype="multipart/form-data">
+<form class="form-narrow" method="post" enctype="multipart/form-data" id="trail-form">
   <label for="title">Titlu</label>
   <input type="text" id="title" name="title" value="{{ trail.title }}" required>
 
@@ -32,14 +32,70 @@
 
   <label for="photos">Adaugă poze</label>
   <input type="file" id="photos" name="photos" accept="image/*" multiple>
-  <div class="hint">Pozele noi se plasează pe traseu după EXIF.</div>
+  <div class="hint">Se urcă direct în storage și se plasează pe traseu după EXIF.</div>
 
   <label for="notes">Notițe / gânduri</label>
   <textarea id="notes" name="notes">{{ trail.notes or '' }}</textarea>
 
+  <div id="upload-list" class="upload-list"></div>
+  <div id="form-error" class="form-error" style="display:none"></div>
+
   <div class="form-actions">
-    <button class="btn btn-primary" type="submit">Salvează</button>
+    <button class="btn btn-primary" type="submit" id="save-btn">Salvează</button>
     <a class="btn btn-ghost" href="{{ url_for('trails.detail', trail_id=trail.id) }}">Renunță</a>
   </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="{{ url_for('static', filename='js/photo-upload.js') }}"></script>
+<script>
+/* Pozele noi se urca direct in R2 inainte de submit; campurile formularului
+   se trimit apoi normal (fara fisiere). Daca o poza esueaza, restul raman
+   salvate si formularul se opreste ca sa vezi eroarea. */
+(function () {
+  const form = document.getElementById('trail-form');
+  const saveBtn = document.getElementById('save-btn');
+  const errBox = document.getElementById('form-error');
+  const photosInput = document.getElementById('photos');
+  const uploadList = document.getElementById('upload-list');
+  const trailId = {{ trail.id }};
+  let photosDone = false;
+
+  form.addEventListener('submit', async function (ev) {
+    const files = Array.from(photosInput.files || []);
+    if (photosDone || !files.length) return;  // submit normal, fara poze
+
+    ev.preventDefault();
+    errBox.style.display = 'none';
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Urc pozele...';
+
+    let result;
+    try {
+      result = await uploadTrailPhotos(trailId, files, uploadList);
+    } catch (e) {
+      errBox.textContent = 'Upload eșuat: ' + (e.message || e) + ' — încearcă din nou.';
+      errBox.style.display = 'block';
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Salvează';
+      return;
+    }
+    // pozele reusite sunt deja inregistrate — golim inputul ca sa nu se dubleze
+    photosInput.value = '';
+    photosDone = true;
+
+    if (result.failed) {
+      errBox.textContent = result.failed + ' poze au eșuat (detalii mai sus), ' +
+        result.ok + ' salvate. Apasă din nou Salvează pentru restul modificărilor.';
+      errBox.style.display = 'block';
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Salvează';
+      return;
+    }
+    form.submit();
+  });
+})();
+</script>
 {% endblock %}

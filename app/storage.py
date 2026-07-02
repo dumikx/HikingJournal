@@ -36,6 +36,18 @@ class R2Storage:
             ExpiresIn=self.expiry,
         )
 
+    def put_url(self, key, content_type):
+        """URL presemnat de PUT — browserul urca direct in R2.
+
+        Content-Type intra in semnatura: clientul trebuie sa trimita
+        exact acelasi header, altfel R2 respinge cererea.
+        """
+        return self.client.generate_presigned_url(
+            "put_object",
+            Params={"Bucket": self.bucket, "Key": key, "ContentType": content_type},
+            ExpiresIn=self.expiry,
+        )
+
     def delete(self, key):
         self.client.delete_object(Bucket=self.bucket, Key=key)
 
@@ -55,6 +67,10 @@ class LocalStorage:
     def url(self, key):
         from flask import url_for
         return url_for("trails.local_media", key=key)
+
+    def put_url(self, key, content_type):
+        from flask import url_for
+        return url_for("trails.local_media_put", key=key)
 
     def delete(self, key):
         path = os.path.join(self.root, key.replace("/", "__"))

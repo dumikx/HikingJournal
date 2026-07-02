@@ -45,7 +45,7 @@
   {% for p in photos %}
   <figure>
     <img src="{{ p.url }}" alt="{{ p.caption or trail.title }}" loading="lazy"
-         onclick="openLightbox('{{ p.url }}')">
+         onclick="openLightbox('{{ p.url }}', '{{ p.orig_url }}')">
     {% if p.taken_at %}<span class="ph-time">{{ p.taken_at }}</span>{% endif %}
     <form method="post" action="{{ url_for('trails.delete_photo', photo_id=p.id) }}"
           onsubmit="return confirm('Ștergi poza?');">
@@ -61,7 +61,11 @@
 <div class="notes">{{ trail.notes }}</div>
 {% endif %}
 
-<div id="lightbox" onclick="this.classList.remove('open')"><img id="lightbox-img" alt=""></div>
+<div id="lightbox" onclick="this.classList.remove('open')">
+  <img id="lightbox-img" alt="">
+  <a id="lightbox-orig" class="btn btn-ghost" href="#" target="_blank" rel="noopener"
+     onclick="event.stopPropagation()">Original</a>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -150,8 +154,9 @@ photos.forEach(p => {
   });
 })();
 
-function openLightbox(url) {
+function openLightbox(url, origUrl) {
   document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-orig').href = origUrl || url;
   document.getElementById('lightbox').classList.add('open');
 }
 </script>
