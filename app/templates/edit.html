@@ -28,6 +28,13 @@
       <label for="peak">Vârf</label>
       <input type="text" id="peak" name="peak" value="{{ trail.peak or '' }}">
     </div>
+    <div>
+      <label for="elev_max_override">Altitudine max (corecție)</label>
+      <input type="number" id="elev_max_override" name="elev_max_override" min="0" max="9000"
+             value="{{ trail.elev_max_override if trail.elev_max_override is not none else '' }}"
+             placeholder="GPX: {{ trail.elev_max_m }} m">
+      <div class="hint">Opțional — GPS-ul subestimează vârfurile. Gol = valoarea din GPX.</div>
+    </div>
   </div>
 
   <label for="photos">Adaugă poze</label>

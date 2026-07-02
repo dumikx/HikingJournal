@@ -248,6 +248,16 @@ def edit(trail_id):
         trail.marcaj = request.form.get("marcaj") or None
         trail.notes = request.form.get("notes", "").strip() or None
 
+        # corectie manuala de altitudine maxima: gol = valoarea din GPX
+        raw_elev = request.form.get("elev_max_override", "").strip()
+        if raw_elev:
+            try:
+                trail.elev_max_override = max(0, min(9000, int(raw_elev)))
+            except ValueError:
+                flash("Corecția de altitudine trebuie să fie un număr — am ignorat-o.")
+        else:
+            trail.elev_max_override = None
+
         files = request.files.getlist("photos")
         if any(f.filename for f in files):
             _attach_photos(trail, files, _gpx_points(trail))

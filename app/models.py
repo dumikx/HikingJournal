@@ -38,6 +38,9 @@ class Trail(db.Model):
     descent_m = db.Column(db.Integer)
     elev_min_m = db.Column(db.Integer)
     elev_max_m = db.Column(db.Integer)
+    # corectie manuala de afisare: GPS-ul subestimeaza cota varfurilor;
+    # datele din GPX raman neatinse, doar afisarea foloseste valoarea asta
+    elev_max_override = db.Column(db.Integer)
     duration_min = db.Column(db.Integer)        # cap-coada
     moving_min = db.Column(db.Integer)          # doar in miscare
 
@@ -61,6 +64,11 @@ class Trail(db.Model):
         "Photo", backref="trail", cascade="all, delete-orphan", lazy=True,
         order_by="Photo.taken_at",
     )
+
+    @property
+    def elev_max_display(self):
+        """Altitudinea maxima de afisat: corectia manuala, altfel cea din GPX."""
+        return self.elev_max_override if self.elev_max_override is not None else self.elev_max_m
 
     @property
     def track(self):

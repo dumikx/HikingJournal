@@ -134,6 +134,30 @@ r = c.post(f"/trail/{trail_id}/edit", data={
 assert "Test Peleaga v2" in r.get_data(as_text=True)
 print("editare: OK")
 
+# --- corectie manuala de altitudine maxima ---
+with app.app_context():
+    from app.models import Trail
+    gpx_max = db_max = Trail.query.get(trail_id).elev_max_m
+r = c.post(f"/trail/{trail_id}/edit", data={
+    "title": "Test Peleaga v2", "date": "2026-06-27",
+    "elev_max_override": "2509",
+}, follow_redirects=True)
+html = r.get_data(as_text=True)
+assert f"–2509" in html, "corectia de altitudine nu se afiseaza"
+assert "corectat manual" in html, "lipseste marcajul de corectie"
+with app.app_context():
+    from app.models import Trail
+    t = Trail.query.get(trail_id)
+    assert t.elev_max_override == 2509 and t.elev_max_m == gpx_max, \
+        "corectia a atins valoarea calculata din GPX!"
+# golirea campului revine la valoarea din GPX
+r = c.post(f"/trail/{trail_id}/edit", data={
+    "title": "Test Peleaga v2", "date": "2026-06-27", "elev_max_override": "",
+}, follow_redirects=True)
+html = r.get_data(as_text=True)
+assert f"–{gpx_max}" in html and "corectat manual" not in html
+print("corectie altitudine maxima (setare + revenire la GPX): OK")
+
 # --- stergere poza ---
 r = c.post(f"/photo/{photo_out_id}/delete", follow_redirects=True)
 assert "Poze (1)" in r.get_data(as_text=True)

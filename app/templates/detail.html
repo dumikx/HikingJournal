@@ -23,7 +23,8 @@
   <div class="stat"><div class="k">Distanță</div><div class="v">{{ trail.distance_km }} <small>km</small></div></div>
   <div class="stat"><div class="k">Urcare</div><div class="v">{{ trail.ascent_m }} <small>m</small></div></div>
   <div class="stat"><div class="k">Coborâre</div><div class="v">{{ trail.descent_m }} <small>m</small></div></div>
-  <div class="stat"><div class="k">Altitudine</div><div class="v">{{ trail.elev_min_m }}–{{ trail.elev_max_m }} <small>m</small></div></div>
+  <div class="stat"><div class="k">Altitudine</div><div class="v"
+    {%- if trail.elev_max_override is not none %} title="maxim corectat manual — GPX-ul a înregistrat {{ trail.elev_max_m }} m"{% endif %}>{{ trail.elev_min_m }}–{{ trail.elev_max_display }} <small>m</small></div></div>
   {% if trail.duration_min %}
   <div class="stat"><div class="k">Durată</div><div class="v">{{ trail.duration_min // 60 }}h{{ '%02d' % (trail.duration_min % 60) }}</div></div>
   {% endif %}
